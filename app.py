@@ -126,15 +126,15 @@ def create_heatmap(df, point_type='origin'):
 
 def create_scatter_map(df):
     """Create a scatter map showing both origins and destinations."""
-    origins = df[['lat_origin', 'long_origin', 'zone_origin', 'request_status']].copy()
-    origins.columns = ['lat', 'lon', 'zone', 'status']
+    origins = df[['lat_origin', 'long_origin', 'zone_origin', 'request_status', 'source']].copy()
+    origins.columns = ['lat', 'lon', 'zone', 'status', 'service']
     origins['type'] = 'Origin'
-    origins = origins.dropna()
+    origins = origins.dropna(subset=['lat', 'lon'])
     
-    destinations = df[['lat_destination', 'long_destination', 'zone_destination', 'request_status']].copy()
-    destinations.columns = ['lat', 'lon', 'zone', 'status']
+    destinations = df[['lat_destination', 'long_destination', 'zone_destination', 'request_status', 'source']].copy()
+    destinations.columns = ['lat', 'lon', 'zone', 'status', 'service']
     destinations['type'] = 'Destination'
-    destinations = destinations.dropna()
+    destinations = destinations.dropna(subset=['lat', 'lon'])
     
     combined = pd.concat([origins, destinations], ignore_index=True)
     
@@ -146,7 +146,7 @@ def create_scatter_map(df):
         lat='lat',
         lon='lon',
         color='type',
-        hover_data=['zone', 'status'],
+        hover_data=['service', 'zone', 'status'],
         color_discrete_map={'Origin': 'green', 'Destination': 'red'},
         mapbox_style="open-street-map",
         zoom=10
