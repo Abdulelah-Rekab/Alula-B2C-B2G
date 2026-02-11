@@ -4,9 +4,8 @@ Alula B2C/B2G Heatmap Dashboard
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+import plotly.figure_factory as ff
 
 # Page configuration
 st.set_page_config(
@@ -90,74 +89,175 @@ def load_b2g_data():
 ALULA_CENTER_LAT = 26.6
 ALULA_CENTER_LON = 37.95
 
+# Bounding box around AlUla region to filter outlier points
+ALULA_BOUNDS = {
+    'lat_min': 25.5, 'lat_max': 27.5,
+    'lon_min': 37.0, 'lon_max': 39.0
+}
 
-def create_heatmap(df, point_type='origin'):
-    """Create a density heatmap for origin or destination points."""
+
+def create_hexbin_map(df, point_type='origin', animation_col=None):
+    """Create a hexbin heatmap with optional animation by day or hour."""
     if point_type == 'origin':
         lat_col, lon_col = 'lat_origin', 'long_origin'
-        zone_col = 'zone_origin'
     else:
         lat_col, lon_col = 'lat_destination', 'long_destination'
-        zone_col = 'zone_destination'
     
-    map_df = df[[lat_col, lon_col, zone_col, 'request_status']].dropna()
+    cols = [lat_col, lon_col]
+    if animation_col and animation_col in df.columns:
+        cols.append(animation_col)
+    
+    map_df = df[cols].dropna(subset=[lat_col, lon_col]).copy()
+    
+    # Filter to AlUla region to avoid outlier points stretching the hex grid
+    map_df = map_df[
+        (map_df[lat_col].between(ALULA_BOUNDS['lat_min'], ALULA_BOUNDS['lat_max'])) &
+        (map_df[lon_col].between(ALULA_BOUNDS['lon_min'], ALULA_BOUNDS['lon_max']))
+    ]
     
     if map_df.empty:
         return None
     
-    fig = px.density_mapbox(
-        map_df,
+    kwargs = dict(
+        data_frame=map_df,
         lat=lat_col,
         lon=lon_col,
-        hover_data=[zone_col, 'request_status'],
-        radius=15,
-        zoom=10,
-        mapbox_style="open-street-map"
+        nx_hexagon=15,
+        opacity=0.5,
+        min_count=1,
+        color_continuous_scale='Cividis',
+        mapbox_style='open-street-map',
+        labels={'color': 'Point Count'},
+        show_original_data=True,
+        original_data_marker=dict(size=4, opacity=0.6, color='deeppink')
     )
     
+    if animation_col and animation_col in map_df.columns:
+        if animation_col == 'date':
+            map_df['period'] = map_df['date'].astype(str)
+            map_df = map_df.sort_values('period')
+            kwargs['data_frame'] = map_df
+            kwargs['animation_frame'] = 'period'
+            kwargs['labels'] = {'color': 'Point Count', 'frame': 'Day'}
+        elif animation_col == 'hour':
+            map_df['period'] = map_df['hour'].astype(str).str.zfill(2) + ':00'
+            map_df = map_df.sort_values('hour')
+            kwargs['data_frame'] = map_df
+            kwargs['animation_frame'] = 'period'
+            kwargs['labels'] = {'color': 'Point Count', 'frame': 'Hour'}
+    
+    try:
+        fig = ff.create_hexbin_mapbox(**kwargs)
+    except Exception as e:
+        return None
+    
     fig.update_layout(
-        mapbox=dict(center=dict(lat=ALULA_CENTER_LAT, lon=ALULA_CENTER_LON), zoom=10),
+        map=dict(center=dict(lat=ALULA_CENTER_LAT, lon=ALULA_CENTER_LON), zoom=11),
         height=600,
         margin=dict(l=0, r=0, t=0, b=0)
     )
     
+    if animation_col and animation_col in map_df.columns:
+        fig.layout.sliders[0].pad.t = 20
+        fig.layout.updatemenus[0].pad.t = 40
+    
     return fig
 
 
-def create_scatter_map(df):
-    """Create a scatter map showing both origins and destinations."""
-    origins = df[['lat_origin', 'long_origin', 'zone_origin', 'request_status', 'source']].copy()
-    origins.columns = ['lat', 'lon', 'zone', 'status', 'service']
-    origins['type'] = 'Origin'
-    origins = origins.dropna(subset=['lat', 'lon'])
+def create_hexbin_od_map(df, animation_col=None):
+    """Create a hexbin map with both origin and destination points overlaid."""
+    origin_cols = ['lat_origin', 'long_origin']
+    dest_cols = ['lat_destination', 'long_destination']
+    extra_cols = []
+    if animation_col and animation_col in df.columns:
+        extra_cols.append(animation_col)
     
-    destinations = df[['lat_destination', 'long_destination', 'zone_destination', 'request_status', 'source']].copy()
-    destinations.columns = ['lat', 'lon', 'zone', 'status', 'service']
-    destinations['type'] = 'Destination'
-    destinations = destinations.dropna(subset=['lat', 'lon'])
+    origins = df[origin_cols + extra_cols].dropna(subset=origin_cols).copy()
+    origins = origins.rename(columns={'lat_origin': 'lat', 'long_origin': 'lon'})
+    
+    destinations = df[dest_cols + extra_cols].dropna(subset=dest_cols).copy()
+    destinations = destinations.rename(columns={'lat_destination': 'lat', 'long_destination': 'lon'})
     
     combined = pd.concat([origins, destinations], ignore_index=True)
+    
+    # Filter to AlUla region to avoid outlier points stretching the hex grid
+    combined = combined[
+        (combined['lat'].between(ALULA_BOUNDS['lat_min'], ALULA_BOUNDS['lat_max'])) &
+        (combined['lon'].between(ALULA_BOUNDS['lon_min'], ALULA_BOUNDS['lon_max']))
+    ]
     
     if combined.empty:
         return None
     
-    fig = px.scatter_mapbox(
-        combined,
+    # Also filter origins/destinations for scatter overlay
+    origins = origins[
+        (origins['lat'].between(ALULA_BOUNDS['lat_min'], ALULA_BOUNDS['lat_max'])) &
+        (origins['lon'].between(ALULA_BOUNDS['lon_min'], ALULA_BOUNDS['lon_max']))
+    ]
+    destinations = destinations[
+        (destinations['lat'].between(ALULA_BOUNDS['lat_min'], ALULA_BOUNDS['lat_max'])) &
+        (destinations['lon'].between(ALULA_BOUNDS['lon_min'], ALULA_BOUNDS['lon_max']))
+    ]
+    
+    # Use only lat/lon columns for hexbin (no extra columns that could interfere)
+    hexbin_df = combined[['lat', 'lon'] + extra_cols].copy()
+    
+    kwargs = dict(
+        data_frame=hexbin_df,
         lat='lat',
         lon='lon',
-        color='type',
-        hover_data=['service', 'zone', 'status'],
-        color_discrete_map={'Origin': 'green', 'Destination': 'red'},
-        mapbox_style="open-street-map",
-        zoom=10
+        nx_hexagon=15,
+        opacity=0.5,
+        min_count=1,
+        color_continuous_scale='Cividis',
+        mapbox_style='open-street-map',
+        labels={'color': 'Point Count'},
+        show_original_data=True,
+        original_data_marker=dict(size=4, opacity=0.6, color='deeppink')
     )
     
+    if animation_col and animation_col in combined.columns:
+        if animation_col == 'date':
+            hexbin_df['period'] = hexbin_df['date'].astype(str)
+            hexbin_df = hexbin_df.sort_values('period')
+            kwargs['data_frame'] = hexbin_df
+            kwargs['animation_frame'] = 'period'
+            kwargs['labels'] = {'color': 'Point Count', 'frame': 'Day'}
+        elif animation_col == 'hour':
+            hexbin_df['period'] = hexbin_df['hour'].astype(str).str.zfill(2) + ':00'
+            hexbin_df = hexbin_df.sort_values('hour')
+            kwargs['data_frame'] = hexbin_df
+            kwargs['animation_frame'] = 'period'
+            kwargs['labels'] = {'color': 'Point Count', 'frame': 'Hour'}
+    
+    try:
+        fig = ff.create_hexbin_mapbox(**kwargs)
+    except Exception as e:
+        return None
+    
+    # Add origin/destination scatter using Plotly v6 maplibre API (Scattermap, not Scattermapbox)
+    if not animation_col:
+        fig.add_trace(go.Scattermap(
+            lat=origins['lat'], lon=origins['lon'],
+            mode='markers', name='Origin',
+            marker=dict(size=4, color='green', opacity=0.5)
+        ))
+        fig.add_trace(go.Scattermap(
+            lat=destinations['lat'], lon=destinations['lon'],
+            mode='markers', name='Destination',
+            marker=dict(size=4, color='red', opacity=0.5)
+        ))
+    
     fig.update_layout(
-        mapbox=dict(center=dict(lat=ALULA_CENTER_LAT, lon=ALULA_CENTER_LON)),
+        map=dict(center=dict(lat=ALULA_CENTER_LAT, lon=ALULA_CENTER_LON), zoom=11),
         height=600,
         margin=dict(l=0, r=0, t=0, b=0),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
     )
+    
+    if animation_col and animation_col in hexbin_df.columns:
+        fig.layout.sliders[0].pad.t = 20
+        fig.layout.updatemenus[0].pad.t = 40
     
     return fig
 
@@ -327,24 +427,30 @@ def main():
     
     # Map tabs
     st.subheader("Geographic View")
-    map_tabs = st.tabs(["Origin vs Destination", "Origins Heatmap", "Destinations Heatmap"])
+    map_tabs = st.tabs(["Origin vs Destination", "Origins Hexagon Heatmap", "Destinations Hexagon Heatmap"])
     
     with map_tabs[0]:
-        fig = create_scatter_map(filtered_df)
+        anim_mode_od = st.radio("Animation", ["None", "By Day", "By Hour"], horizontal=True, key="anim_od")
+        anim_col_od = {'None': None, 'By Day': 'date', 'By Hour': 'hour'}[anim_mode_od]
+        fig = create_hexbin_od_map(filtered_df, animation_col=anim_col_od)
         if fig:
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True})
         else:
             st.warning("No data available.")
     
     with map_tabs[1]:
-        fig = create_heatmap(filtered_df, 'origin')
+        anim_mode_o = st.radio("Animation", ["None", "By Day", "By Hour"], horizontal=True, key="anim_origin")
+        anim_col_o = {'None': None, 'By Day': 'date', 'By Hour': 'hour'}[anim_mode_o]
+        fig = create_hexbin_map(filtered_df, 'origin', animation_col=anim_col_o)
         if fig:
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True})
         else:
             st.warning("No data available.")
     
     with map_tabs[2]:
-        fig = create_heatmap(filtered_df, 'destination')
+        anim_mode_d = st.radio("Animation", ["None", "By Day", "By Hour"], horizontal=True, key="anim_dest")
+        anim_col_d = {'None': None, 'By Day': 'date', 'By Hour': 'hour'}[anim_mode_d]
+        fig = create_hexbin_map(filtered_df, 'destination', animation_col=anim_col_d)
         if fig:
             st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': True})
         else:
@@ -370,4 +476,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()  
