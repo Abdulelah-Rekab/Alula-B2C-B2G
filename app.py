@@ -348,48 +348,123 @@ def check_login():
 
     st.markdown("""
     <style>
-        [data-testid="stSidebar"] { display: none; }
-        .login-container {
-            max-width: 400px;
-            margin: 8rem auto;
-            padding: 2.5rem;
-            border-radius: 12px;
-            background: #f8f9fa;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        /* Hide sidebar and default header on login */
+        [data-testid="stSidebar"],
+        [data-testid="stHeader"] { display: none; }
+
+        .block-container {
+            padding-top: 0 !important;
+            max-width: 100% !important;
         }
-        .login-title {
-            text-align: center;
-            font-size: 1.6rem;
-            font-weight: 700;
-            margin-bottom: 0.2rem;
+
+        .login-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f1724 0%, #1a2332 50%, #0f1724 100%);
         }
-        .login-subtitle {
+
+        .login-card {
+            width: 380px;
+            padding: 2.5rem 2.2rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+        }
+
+        .login-brand {
             text-align: center;
-            color: #777;
-            margin-bottom: 1.5rem;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.35);
+            margin-bottom: 0.4rem;
+        }
+
+        .login-heading {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #e8ecf1;
+            margin-bottom: 0.3rem;
+        }
+
+        .login-sub {
+            text-align: center;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 2rem;
+        }
+
+        .login-divider {
+            width: 40px;
+            height: 2px;
+            background: #4a9eff;
+            margin: 0.8rem auto 1.8rem auto;
+            border-radius: 1px;
+        }
+
+        /* Style the form inputs */
+        .login-card .stTextInput > div > div > input {
+            background: rgba(255, 255, 255, 0.06) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 6px !important;
+            color: #e8ecf1 !important;
+            padding: 0.6rem 0.8rem !important;
+        }
+
+        .login-card .stTextInput > label {
+            color: rgba(255, 255, 255, 0.55) !important;
+            font-size: 0.8rem !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+        }
+
+        /* Style the submit button */
+        .login-card .stFormSubmitButton > button {
+            background: #4a9eff !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 0.55rem 1rem !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            letter-spacing: 0.5px !important;
+            margin-top: 0.8rem !important;
+            transition: background 0.2s ease !important;
+        }
+
+        .login-card .stFormSubmitButton > button:hover {
+            background: #3a8bee !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown('<p class="login-title">🔐 Alula Dashboard</p>', unsafe_allow_html=True)
-        st.markdown('<p class="login-subtitle">Sign in to continue</p>', unsafe_allow_html=True)
+    st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
+    st.markdown('<div class="login-brand">Royal Commission for AlUla</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-heading">Alula Analytics</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-sub">Enter your credentials to access the dashboard</div>', unsafe_allow_html=True)
 
-        with st.form("login_form"):
-            username = st.text_input("Username", placeholder="Enter your username")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
-            submitted = st.form_submit_button("Sign In", use_container_width=True)
+    with st.form("login_form"):
+        username = st.text_input("Username", placeholder="Username")
+        password = st.text_input("Password", type="password", placeholder="Password")
+        submitted = st.form_submit_button("Sign In", use_container_width=True)
 
-            if submitted:
-                valid_user = st.secrets["auth"]["username"]
-                valid_pass = st.secrets["auth"]["password"]
+        if submitted:
+            valid_user = st.secrets["auth"]["username"]
+            valid_pass = st.secrets["auth"]["password"]
 
-                if username == valid_user and password == valid_pass:
-                    st.session_state["authenticated"] = True
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password.")
+            if username == valid_user and password == valid_pass:
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
     return False
 
@@ -404,7 +479,7 @@ def main():
 
     # Logout button in sidebar
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 Logout"):
+    if st.sidebar.button("Logout"):
         st.session_state["authenticated"] = False
         st.rerun()
 
