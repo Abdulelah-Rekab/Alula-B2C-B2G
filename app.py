@@ -346,107 +346,103 @@ def check_login():
     if st.session_state.get("authenticated"):
         return True
 
+    # Style the entire page for login — target Streamlit's own DOM elements
     st.markdown("""
     <style>
-        /* Hide sidebar and default header on login */
+        /* Hide sidebar, header, and toolbar on login */
         [data-testid="stSidebar"],
-        [data-testid="stHeader"] { display: none; }
+        [data-testid="stHeader"],
+        [data-testid="stToolbar"] { display: none !important; }
+
+        /* Dark background on the app container */
+        [data-testid="stAppViewContainer"] {
+            background: linear-gradient(160deg, #0c1117 0%, #151d2b 100%);
+        }
+
+        [data-testid="stMain"] {
+            background: transparent !important;
+        }
 
         .block-container {
-            padding-top: 0 !important;
-            max-width: 100% !important;
+            max-width: 420px !important;
+            padding-top: 12vh !important;
+            margin: 0 auto !important;
         }
 
-        .login-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #0f1724 0%, #1a2332 50%, #0f1724 100%);
-        }
-
-        .login-card {
-            width: 380px;
-            padding: 2.5rem 2.2rem;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-        }
-
+        /* Title & subtitle */
         .login-brand {
             text-align: center;
-            font-size: 0.7rem;
-            letter-spacing: 3px;
+            font-size: 0.65rem;
+            letter-spacing: 3.5px;
             text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.35);
-            margin-bottom: 0.4rem;
+            color: rgba(255, 255, 255, 0.30);
+            margin-bottom: 0.2rem;
         }
-
         .login-heading {
             text-align: center;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            color: #e8ecf1;
-            margin-bottom: 0.3rem;
+            color: #dce3ec;
+            margin-bottom: 0;
         }
-
-        .login-sub {
-            text-align: center;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.4);
-            margin-bottom: 2rem;
-        }
-
-        .login-divider {
-            width: 40px;
+        .login-accent {
+            width: 36px;
             height: 2px;
             background: #4a9eff;
-            margin: 0.8rem auto 1.8rem auto;
+            margin: 0.7rem auto 0.6rem auto;
             border-radius: 1px;
         }
-
-        /* Style the form inputs */
-        .login-card .stTextInput > div > div > input {
-            background: rgba(255, 255, 255, 0.06) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 6px !important;
-            color: #e8ecf1 !important;
-            padding: 0.6rem 0.8rem !important;
+        .login-sub {
+            text-align: center;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.35);
+            margin-bottom: 1.6rem;
         }
 
-        .login-card .stTextInput > label {
-            color: rgba(255, 255, 255, 0.55) !important;
-            font-size: 0.8rem !important;
+        /* Form styling */
+        .stTextInput > label {
+            color: rgba(255, 255, 255, 0.50) !important;
+            font-size: 0.75rem !important;
             font-weight: 500 !important;
             letter-spacing: 0.5px !important;
             text-transform: uppercase !important;
         }
+        .stTextInput input {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.10) !important;
+            border-radius: 6px !important;
+            color: #e0e6ef !important;
+        }
+        .stTextInput input:focus {
+            border-color: #4a9eff !important;
+            box-shadow: 0 0 0 1px #4a9eff !important;
+        }
 
-        /* Style the submit button */
-        .login-card .stFormSubmitButton > button {
+        /* Submit button */
+        .stFormSubmitButton > button {
             background: #4a9eff !important;
-            color: #ffffff !important;
+            color: #fff !important;
             border: none !important;
             border-radius: 6px !important;
-            padding: 0.55rem 1rem !important;
             font-weight: 600 !important;
             font-size: 0.85rem !important;
-            letter-spacing: 0.5px !important;
-            margin-top: 0.8rem !important;
+            letter-spacing: 0.4px !important;
+            padding: 0.5rem 1.2rem !important;
+            margin-top: 0.6rem !important;
             transition: background 0.2s ease !important;
         }
-
-        .login-card .stFormSubmitButton > button:hover {
-            background: #3a8bee !important;
+        .stFormSubmitButton > button:hover {
+            background: #3b8ae6 !important;
         }
+
+        /* Hide the footer as well */
+        footer { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
     st.markdown('<div class="login-brand">Royal Commission for AlUla</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-heading">Alula Analytics</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-heading">AlUla Analytics</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-accent"></div>', unsafe_allow_html=True)
     st.markdown('<div class="login-sub">Enter your credentials to access the dashboard</div>', unsafe_allow_html=True)
 
     with st.form("login_form"):
@@ -463,8 +459,6 @@ def check_login():
                 st.rerun()
             else:
                 st.error("Invalid username or password.")
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
 
     return False
 
