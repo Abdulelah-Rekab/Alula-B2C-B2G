@@ -341,10 +341,73 @@ def create_zone_heatmap(df):
     return fig
 
 
+def check_login():
+    """Display login page and return True if authenticated."""
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.markdown("""
+    <style>
+        [data-testid="stSidebar"] { display: none; }
+        .login-container {
+            max-width: 400px;
+            margin: 8rem auto;
+            padding: 2.5rem;
+            border-radius: 12px;
+            background: #f8f9fa;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        .login-title {
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .login-subtitle {
+            text-align: center;
+            color: #777;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown('<p class="login-title">🔐 Alula Dashboard</p>', unsafe_allow_html=True)
+        st.markdown('<p class="login-subtitle">Sign in to continue</p>', unsafe_allow_html=True)
+
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            submitted = st.form_submit_button("Sign In", use_container_width=True)
+
+            if submitted:
+                valid_user = st.secrets["auth"]["username"]
+                valid_pass = st.secrets["auth"]["password"]
+
+                if username == valid_user and password == valid_pass:
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password.")
+
+    return False
+
+
 def main():
+    # Gate access behind login
+    if not check_login():
+        return
+
     st.title("Alula B2C/B2G Heatmap Dashboard")
     st.caption("January 2026")
-    
+
+    # Logout button in sidebar
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state["authenticated"] = False
+        st.rerun()
+
     # Load data
     try:
         b2c_df = load_b2c_data()
