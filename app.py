@@ -30,13 +30,23 @@ st.markdown("""
 @st.cache_data
 def load_b2c_data():
     """Load and preprocess the B2C data."""
-    df = pd.read_csv('RACB2C_January2026')
+    df = pd.read_csv('RAC_B2C.csv')
     
     df['request_creation_time'] = pd.to_datetime(df['request_creation_time'], format='mixed')
     df['date'] = df['request_creation_time'].dt.date
     df['hour'] = df['request_creation_time'].dt.hour
     df['day_name'] = df['request_creation_time'].dt.day_name()
     df['day_of_week'] = df['request_creation_time'].dt.dayofweek
+    
+    # Map new CSV column names to standardized names used throughout the app
+    df = df.rename(columns={
+        'origin_lat': 'lat_origin',
+        'origin_lng': 'long_origin',
+        'destination_lat': 'lat_destination',
+        'destination_lng': 'long_destination',
+        'origin_zone': 'zone_origin',
+        'destination_zone': 'zone_destination'
+    })
     
     df['zone_origin'] = df['zone_origin'].replace('', 'Unknown').fillna('Unknown')
     df['zone_destination'] = df['zone_destination'].replace('', 'Unknown').fillna('Unknown')
@@ -54,7 +64,7 @@ def load_b2c_data():
 @st.cache_data
 def load_b2g_data():
     """Load and preprocess the B2G data."""
-    df = pd.read_csv('RACB2G_January2026')
+    df = pd.read_csv('RAC_B2G.csv')
     
     df['request_creation_time'] = pd.to_datetime(df['request_creation_time'], format='mixed')
     df['date'] = df['request_creation_time'].dt.date
